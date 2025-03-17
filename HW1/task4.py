@@ -4,119 +4,120 @@ import math
 import numpy as np
 from collections import Counter, defaultdict
 
-sys.stdout = open(f'task4.txt', 'w')
+sys.stdout=open(f'task4.txt', 'w')
 
-# 1. 文档的表示: 构造词典和计算TF-IDF向量
-def build_vocab_and_tfidf_vectors(corpus_dir):
-    doc_count = 0
-    term_doc_freq = defaultdict(int)
-    term_freqs = []
+def build_vocab_tifdif(dir):
+    doc_cnt=0
+    word_freqs={}
+    doc_freqs=[]
     
-    # 读取所有文档，计算词频
-    for filename in os.listdir(corpus_dir):
-        filepath = os.path.join(corpus_dir, filename)
-        with open(filepath, 'r', encoding='utf-8') as file:
-            words = file.read().split()
-            doc_count += 1
-            term_freq = Counter(words)
-            term_freqs.append(term_freq)
-            for word in term_freq:
-                term_doc_freq[word] += 1
+    for file in os.listdir(dir):
+        path = os.path.join(dir, file)
+        with open(path, 'r') as file:
+            doc_cnt+=1
+            words=file.read().split()
+            doc_freqs.append(Counter(words))                
+            for word in set(words):
+                if word in word_freqs:
+                    word_freqs[word]+=1
+                else:
+                    word_freqs[word]=1
     
-    vocab = {word: idx for idx, word in enumerate(term_doc_freq.keys())}
-    
-    # 计算TF-IDF向量
-    tfidf_vectors = []
-    for term_freq in term_freqs:
-        tfidf_vector = np.zeros(len(vocab))
-        for word, freq in term_freq.items():
-            if word in vocab:
-                tf = freq / sum(term_freq.values())
-                idf = math.log(doc_count / (1 + term_doc_freq[word]))
-                tfidf_vector[vocab[word]] = tf * idf
-        tfidf_vectors.append(tfidf_vector)
-    
-    return vocab, np.array(tfidf_vectors)
+    vocab={word: idx for idx, word in enumerate(word_freqs.keys())}
 
-# 2. 计算词语共现矩阵
-def build_cooccurrence_matrix(corpus_dir, vocab):
+    tfidf_vecs=[]
+    for freqs in doc_freqs:
+        tfidf_vec=np.zeros(len(vocab))
+        for word, freq in freqs.items():
+            tf=freq/sum(freqs.values())
+            idf=math.log(doc_cnt/(1+word_freqs[word]))
+            tfidf_vec[vocab[word]]=tf*idf
+        tfidf_vecs.append(tfidf_vec)
+    
+    return vocab, np.array(tfidf_vecs)
+
+def build_cooc_matrix(dir, vocab):
     cooc_matrix = np.zeros((len(vocab), len(vocab)))
     
-    for filename in os.listdir(corpus_dir):
-        filepath = os.path.join(corpus_dir, filename)
-        with open(filepath, 'r', encoding='utf-8') as file:
-            words = file.read().split()
-            unique_words = set(words)
-            for word1 in unique_words:
-                if word1 in vocab:
-                    idx1 = vocab[word1]
-                    for word2 in unique_words:
-                        if word2 in vocab:
-                            idx2 = vocab[word2]
-                            cooc_matrix[idx1][idx2] += 1
+    for file in os.listdir(dir):
+        path = os.path.join(dir, file)
+        with open(path, 'r') as file:
+            words=set(file.read().split())
+            for word1 in words:
+                idx1=vocab[word1]
+                for word2 in words:
+                    idx2=vocab[word2]
+                    cooc_matrix[idx1][idx2]+=1
     
     return cooc_matrix
 
-# 计算欧式距离和余弦相似度
-def euclidean_distance(vec1, vec2):
-    return np.linalg.norm(vec1 - vec2)
+def distance(vec1, vec2):
+    return np.linalg.norm(vec1-vec2)
 
-def cosine_similarity(vec1, vec2):
-    dot_product = np.dot(vec1, vec2)
-    norm1 = np.linalg.norm(vec1)
-    norm2 = np.linalg.norm(vec2)
-    return dot_product / (norm1 * norm2)
+def cos_similar(vec1, vec2):
+    inner=np.dot(vec1, vec2)
+    len1=np.linalg.norm(vec1)
+    len2=np.linalg.norm(vec2)
+    return inner/(len1*len2+1e-8)
 
-# 3. 找到最相似的文档
-def find_similar_docs(tfidf_vectors, doc_idx, top_n=5):
-    distances = []
-    similarities = []
-    target_vector = tfidf_vectors[doc_idx]
-    
-    for i, vector in enumerate(tfidf_vectors):
-        if i != doc_idx:
-            distances.append((i, euclidean_distance(target_vector, vector)))
-            similarities.append((i, cosine_similarity(target_vector, vector)))
-    
-    distances.sort(key=lambda x: x[1])
-    similarities.sort(key=lambda x: -x[1])
-    
-    return distances[:top_n], similarities[:top_n]
+def inner_distance(vec1, vec2):
+    return np.dot(vec1, vec2)
+    # return np.linalg.norm(vec1/np.linalg.norm(vec1)-vec2/np.linalg.norm(vec2))
 
-# 4. 找到最相似的词语
-def find_similar_words(cooc_matrix, vocab, word, top_n=5):
+def similar_docs(tfidf_vecs, doc, top_n=5):
+    dists=[]
+    coss=[]
+    inner_dists=[]
+    target=tfidf_vecs[doc]
+    
+    for i, vec in enumerate(tfidf_vecs):
+        if i!=doc:
+            dists.append((i, distance(target, vec)))
+            coss.append((i, cos_similar(target, vec)))
+            inner_dists.append((i, inner_distance(target, vec)))
+    
+    dists.sort(key=lambda x: x[1])
+    coss.sort(key=lambda x: -x[1])
+    inner_dists.sort(key=lambda x: x[1])
+    
+    return dists[:top_n], coss[:top_n], inner_dists[:top_n]
+
+def similar_words(cooc_matrix, vocab, word, top_n=5):
     if word not in vocab:
         return [], []
     
-    word_idx = vocab[word]
-    target_vector = cooc_matrix[word_idx]
+    target=cooc_matrix[vocab[word]]
     
-    distances = []
-    similarities = []
+    dists=[]
+    coss=[]
+    inner_dists=[]
     
-    for i, vector in enumerate(cooc_matrix):
-        if i != word_idx:
-            distances.append((i, euclidean_distance(target_vector, vector)))
-            similarities.append((i, cosine_similarity(target_vector, vector)))
+    for i, vec in enumerate(cooc_matrix):
+        if i != vocab[word]:
+            dists.append((i, distance(target, vec)))
+            coss.append((i, cos_similar(target, vec)))
+            inner_dists.append((i, inner_distance(target, vec)))
     
-    distances.sort(key=lambda x: x[1])
-    similarities.sort(key=lambda x: -x[1])
+    dists.sort(key=lambda x: x[1])
+    coss.sort(key=lambda x: -x[1])
+    inner_dists.sort(key=lambda x: x[1])
     
     inv_vocab = {idx: word for word, idx in vocab.items()}
     
-    return [(inv_vocab[i], dist) for i, dist in distances[:top_n]], [(inv_vocab[i], sim) for i, sim in similarities[:top_n]]
+    return [(inv_vocab[i], dist) for i, dist in dists[:top_n]], [(inv_vocab[i], cos) for i, cos in coss[:top_n]], [(inv_vocab[i], inner_dist) for i, inner_dist in inner_dists[:top_n]]
 
-# 示例用法
-corpus_dir = 'nyt_corp0/'
-vocab, tfidf_vectors = build_vocab_and_tfidf_vectors(corpus_dir)
-cooc_matrix = build_cooccurrence_matrix(corpus_dir, vocab)
+dir='nyt_corp0/'
+vocab, tfidf_vecs=build_vocab_tifdif(dir)
+cooc_matrix=build_cooc_matrix(dir, vocab)
 
-# 文档相似度分析
-distances, similarities = find_similar_docs(tfidf_vectors, doc_idx=0)
-print('欧式距离最近的5篇文档:', distances)
-print('余弦相似度最高的5篇文档:', similarities)
+doc=0
+dists, coss, inner_dists=similar_docs(tfidf_vecs, doc=doc)
+print(f'与文档{doc}欧式距离最近的5篇文档:', dists)
+print(f'与文档{doc}余弦相似度最高的5篇文档:', coss)
+print(f'与文档{doc}内积距离最近的5篇文档:', inner_dists)
 
-# 词语相似度分析
-distances, similarities = find_similar_words(cooc_matrix, vocab, word='news')
-print('欧式距离最近的5个词:', distances)
-print('余弦相似度最高的5个词:', similarities)
+word='news'
+dists, coss, inner_dists=similar_words(cooc_matrix, vocab, word=word)
+print(f'与单词{word}欧式距离最近的5个词:', dists)
+print(f'与单词{word}余弦相似度最高的5个词:', coss)
+print(f'与文档{word}内积距离最近的5个词:', inner_dists)
