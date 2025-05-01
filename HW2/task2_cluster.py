@@ -1,18 +1,15 @@
-import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
+import nltk
 from nltk.corpus import stopwords
 import string
 
-# 下载英文停用词
 nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
 
-# 读取推文数据
 with open('twitter.txt', 'r', encoding='utf-8') as f:
     tweets = [line.strip() for line in f if line.strip()]
 
-# 简单预处理：小写、去标点、去停用词
 def preprocess(text):
     text = text.lower()
     text = text.translate(str.maketrans('', '', string.punctuation))
@@ -22,17 +19,14 @@ def preprocess(text):
 
 tweets_cleaned = [preprocess(tweet) for tweet in tweets]
 
-# 使用 TF-IDF 向量化
-vectorizer = TfidfVectorizer(max_df=0.8, min_df=2)  # 可调节
+vectorizer = TfidfVectorizer(max_df=0.8, min_df=2)
 X = vectorizer.fit_transform(tweets_cleaned)
 
-# 试验不同的 K 值
 for k in [2, 3, 4]:
     print(f'\n===== K = {k} =====')
     kmeans = KMeans(n_clusters=k, random_state=42)
     kmeans.fit(X)
 
-    # 打印每个类的关键词
     order_centroids = kmeans.cluster_centers_.argsort()[:, ::-1]
     terms = vectorizer.get_feature_names_out()
 

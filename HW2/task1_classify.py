@@ -32,26 +32,28 @@ y = df['is_default']
 
 mi_scores = mutual_info_classif(X, y, discrete_features='auto')
 mi_series = pd.Series(mi_scores, index=X.columns).sort_values(ascending=False)
-
 top20_features = mi_series.head(20).index.tolist()
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(12, 12))
 mi_series[top20_features].plot(kind='bar')
 plt.title("Mutual Information Scores of Top 20 Features")
 plt.ylabel("Mutual Information")
+plt.xticks(rotation=330, ha='left', rotation_mode='anchor')
+plt.tight_layout()
 plt.savefig("task1.1_mutual_info.png")
 
+# task 1.2
 models = {
     'Decision Tree': DecisionTreeClassifier(),
     'Naive Bayes': GaussianNB(),
-    'AdaBoost': AdaBoostClassifier()
+    'AdaBoost': AdaBoostClassifier(),
 }
 
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 X_selected = df[top20_features].values
 
 for model_name, model in models.items():
-    print(f"\nModel: {model_name}")
+    print(f"Model: {model_name}")
     auc_scores = []
 
     for fold, (train_idx, val_idx) in enumerate(skf.split(X_selected, y), 1):
@@ -64,4 +66,4 @@ for model_name, model in models.items():
         auc_scores.append(auc)
         print(f"Fold {fold}: AUC = {auc:.4f}")
 
-    print(f"Average AUC: {np.mean(auc_scores):.4f}")
+    print(f"Average AUC: {np.mean(auc_scores):.4f}\n")

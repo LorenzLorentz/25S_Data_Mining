@@ -1,11 +1,11 @@
 
 Model: Decision Tree
-Fold 1: AUC = 0.6527
-Fold 2: AUC = 0.6486
-Fold 3: AUC = 0.6524
-Fold 4: AUC = 0.6525
-Fold 5: AUC = 0.6515
-Average AUC: 0.6515
+Fold 1: AUC = 0.6505
+Fold 2: AUC = 0.6499
+Fold 3: AUC = 0.6560
+Fold 4: AUC = 0.6533
+Fold 5: AUC = 0.6535
+Average AUC: 0.6526
 
 Model: Naive Bayes
 Fold 1: AUC = 0.7736
